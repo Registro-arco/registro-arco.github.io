@@ -127,6 +127,7 @@ textarea{min-height:76px;resize:vertical}
 .scale{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)}
 .emo{display:flex;flex-wrap:wrap;gap:8px}
 .emo .chip .dot{width:9px;height:9px}
+.chip.more{border-style:dashed;color:var(--accent);font-weight:700}
 .list{display:flex;flex-direction:column;gap:8px}
 .item{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start}
 .item .n{font-family:var(--f-display);font-weight:700;color:var(--muted);text-align:center;padding-top:10px;font-variant-numeric:tabular-nums}
@@ -240,7 +241,10 @@ textarea{min-height:76px;resize:vertical}
 <script>
 (function(){
 "use strict";
-const EMOS=[["Ansiedad","#E07B39"],["Miedo","#7A5AC8"],["Tristeza","#4C7BD1"],["Rabia","#D2483C"],["Frustración","#B0477A"],["Vergüenza","#E07AA6"],["Culpa","#8B6D5C"],["Asco","#5E9A4B"],["Alegría","#E3B22A"],["Calma","#2BA7A0"],["Sorpresa","#3FA4D6"],["Otra","#7D8894"]];
+// Orden del arcoíris en resúmenes. EMO_MAIN son las que se ven primero al registrar; el resto aparece con "Ver más".
+const EMOS=[["Ansiedad","#E07B39"],["Miedo","#7A5AC8"],["Tristeza","#4C7BD1"],["Soledad","#5B6FA8"],["Rabia","#D2483C"],["Irritación","#E0624A"],["Frustración","#B0477A"],["Decepción","#6C7FA0"],["Culpa","#8B6D5C"],["Vergüenza","#E07AA6"],["Celos","#A3345C"],["Envidia","#7C8F2E"],["Asco","#5E9A4B"],["Aburrimiento","#9A9184"],["Nostalgia","#8E7CC3"],["Sorpresa","#3FA4D6"],["Alegría","#E3B22A"],["Entusiasmo","#F0A030"],["Cariño","#E8829A"],["Gratitud","#D9A441"],["Orgullo","#C98B1E"],["Esperanza","#4FB3C9"],["Alivio","#6CBF9A"],["Calma","#2BA7A0"],["Otra","#7D8894"]];
+const EMO_MAIN=["Ansiedad","Miedo","Tristeza","Rabia","Frustración","Culpa","Vergüenza","Soledad","Alegría","Calma"];
+let showAllEmo=false;
 const EMOCOL=Object.fromEntries(EMOS);
 const K={rec:"arco-registros-v1",draft:"arco-borrador-v1",pin:"arco-pin-v1",backup:"arco-ultimo-respaldo",hideInstall:"arco-ocultar-instalar",hideBackup:"arco-posponer-respaldo",name:"arco-nombre"};
 const AUTOR="Ps. Nicolás Cabib Olave";
@@ -457,7 +461,11 @@ function renderForm(){
   ${rel?`<div class="notice">Emoción en cadena con ${esc(emoName(rel))} de las ${esc(fmtTime(rel.fecha))}</div>`:""}
   <section class="sec">
     <div class="field"><span class="lbl">¿Qué emoción estás sintiendo?</span>
-      <div class="emo">${EMOS.map(([n,c])=>`<button type="button" class="chip" data-act="emo" data-v="${esc(n)}" aria-pressed="${f.emocion===n}"><i class="dot" style="background:${c}"></i>${esc(n)}</button>`).join("")}</div>
+      ${(()=>{const chip=([n,c])=>`<button type="button" class="chip" data-act="emo" data-v="${esc(n)}" aria-pressed="${f.emocion===n}"><i class="dot" style="background:${c}"></i>${esc(n)}</button>`;
+        const main=EMO_MAIN.map(n=>[n,EMOCOL[n]]), rest=EMOS.filter(([n])=>!EMO_MAIN.includes(n)&&n!=="Otra");
+        const open=showAllEmo||(f.emocion&&!EMO_MAIN.includes(f.emocion));
+        return `<div class="emo">${main.map(chip).join("")}${open?"":`<button type="button" class="chip more" data-act="moreemo">Ver más emociones (${rest.length})</button>`}</div>
+        ${open?`<div class="emo">${rest.map(chip).join("")}${chip(["Otra",EMOCOL.Otra])}</div>`:""}`})()}
       ${f.emocion==="Otra"?`<input type="text" id="emocionOtra" data-f="emocionOtra" value="${esc(f.emocionOtra)}" placeholder="Ponle nombre a la emoción">`:""}
     </div>
     <div class="field"><span class="lbl">Intensidad</span>
@@ -806,7 +814,7 @@ let draftT=null;
 function saveDraft(){clearTimeout(draftT);draftT=setTimeout(()=>{if(view==="form"&&!records.some(x=>x.id===f.id))ls.set(K.draft,JSON.stringify(f))},400)}
 function rerenderKeep(focusId){const y=window.scrollY;renderForm();setChrome();window.scrollTo(0,y);if(focusId){const el=document.getElementById(focusId);if(el)el.focus()}}
 function toast(msg){let t=$(".toast");if(!t){t=document.createElement("div");t.className="toast";t.setAttribute("role","status");document.body.appendChild(t)}t.textContent=msg;clearTimeout(toastT);toastT=setTimeout(()=>t.remove(),3200)}
-function go(v){view=v;formErr="";render();window.scrollTo(0,0)}
+function go(v){view=v;formErr="";if(v==="form")showAllEmo=false;render();window.scrollTo(0,0)}
 function markBackup(){ls.set(K.backup,String(Date.now()))}
 
 document.addEventListener("input",e=>{if(e.target.id==="pname"){ls.set(K.name,e.target.value);return}});
@@ -833,6 +841,7 @@ document.addEventListener("click",async e=>{
   if(a==="related"){const r=records.find(x=>x.id===currentId);f=blank();f.relacionadoCon=currentId;if(r)f.fecha=r.fecha;draftRestored=false;go("form");return}
   if(a==="cancel"){const isNew=!records.some(x=>x.id===f.id);go(isNew?"list":"detail");return}
   if(a==="discard"){ls.del(K.draft);f=blank();draftRestored=false;rerenderKeep();return}
+  if(a==="moreemo"){showAllEmo=true;rerenderKeep();return}
   if(a==="emo"){f.emocion=f.emocion===b.dataset.v?"":b.dataset.v;saveDraft();rerenderKeep(f.emocion==="Otra"?"emocionOtra":null);return}
   if(a==="int"){f.intensidad=+b.dataset.v;saveDraft();rerenderKeep();return}
   if(a==="ant"){const v=b.dataset.v;f.antTipo=f.antTipo.includes(v)?f.antTipo.filter(x=>x!==v):[...f.antTipo,v];saveDraft();rerenderKeep();return}
