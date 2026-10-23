@@ -89,12 +89,14 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .day{display:flex;flex-direction:column;gap:8px}
 .day h2{font-family:var(--f-display);font-size:.95rem;margin:4px 2px 0;color:var(--muted);font-weight:600}
 .day h2::first-letter{text-transform:uppercase}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;text-align:left;width:100%}
-.card .dot{width:12px;height:12px;margin-top:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;text-align:left;width:100%}
 .card .t{font-weight:700;min-width:0}
 .card .h{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.card .p{grid-column:2/4;font-size:.9rem;color:var(--muted);min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.card .meta{grid-column:2/4;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card .p{grid-column:1/3;font-size:.9rem;color:var(--muted);min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card .meta{grid-column:1/3;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ems{display:flex;flex-wrap:wrap;gap:4px 14px}
+.ei{display:inline-flex;align-items:center;gap:6px}
+.ei b{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700;font-size:.9rem}
 .meter{display:flex;gap:2px}
 .meter i{width:9px;height:6px;border-radius:2px;background:var(--surface-2)}
 .meter i.on{background:var(--ink)}
@@ -125,6 +127,10 @@ textarea{min-height:76px;resize:vertical}
 .intens button{height:42px;border:1px solid var(--line);background:var(--bg);border-radius:8px;font-weight:700;font-variant-numeric:tabular-nums;padding:0}
 .intens button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .scale{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)}
+.einten{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.einten:first-of-type{padding-top:2px}
+.ehead{display:flex;align-items:center;gap:8px}
+.ehead .muted{margin-left:auto;font-variant-numeric:tabular-nums}
 .emo{display:flex;flex-wrap:wrap;gap:8px}
 .emo .chip .dot{width:9px;height:9px}
 .chip.more{border-style:dashed;color:var(--accent);font-weight:700}
@@ -164,7 +170,11 @@ textarea{min-height:76px;resize:vertical}
 .dhead .emoname{font-family:var(--f-display);font-size:1.9rem;font-weight:700;line-height:1.05;display:flex;align-items:center;gap:10px;letter-spacing:-.01em;overflow-wrap:anywhere}
 .dhead .emoname .dot{width:16px;height:16px}
 .dhead .when{color:var(--muted);font-variant-numeric:tabular-nums}
-.big{font-family:var(--f-display);font-size:1.1rem}
+.big{font-family:var(--f-display);font-size:1.1rem;font-variant-numeric:tabular-nums}
+.elist{display:flex;flex-direction:column;gap:10px}
+.erow{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap}
+.eint{display:flex;align-items:center;gap:10px}
+.elist.many .emoname{font-size:1.45rem}
 .kv{display:flex;flex-direction:column;gap:4px}
 .kv .k{font-size:.78rem;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .kv .v{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -264,9 +274,17 @@ const parseLocal=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(s||
 const fmtDay=s=>{const d=parseLocal(s);if(isNaN(d))return"Sin fecha";const t=new Date();t.setHours(0,0,0,0);const dd=new Date(d);dd.setHours(0,0,0,0);const diff=Math.round((t-dd)/864e5);const base=d.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});return diff===0?"Hoy · "+base:diff===1?"Ayer · "+base:base};
 const fmtTime=s=>{const d=parseLocal(s);return isNaN(d)?"":d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit",hour12:false})};
 const fmtFull=s=>{const d=parseLocal(s);return isNaN(d)?"Sin fecha":d.toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})+" · "+fmtTime(s)};
-const emoKey=r=>EMOCOL[r.emocion]?r.emocion:"Otra";
-const emoName=r=>r.emocion==="Otra"?(r.emocionOtra||"Otra emoción"):(r.emocion||"Sin emoción");
-const emoColor=r=>EMOCOL[emoKey(r)];
+// Cada registro tiene una o más emociones: r.emociones = [{e:"Ansiedad", otra:"", i:7}, ...]
+const eKey=x=>EMOCOL[x.e]?x.e:"Otra";
+const eName=x=>x.e==="Otra"?(x.otra.trim()||"Otra emoción"):x.e;
+const eColor=x=>EMOCOL[eKey(x)];
+const emoKeys=r=>[...new Set(r.emociones.map(eKey))];
+const emoName=r=>r.emociones.map(eName).join(", ")||"Sin emoción";
+const emoColor=r=>r.emociones.length?eColor(r.emociones[0]):EMOCOL.Otra;
+const peak=r=>r.emociones.reduce((m,x)=>Math.max(m,x.i),0);
+const aggKey=x=>eKey(x)==='Otra'?eName(x):x.e;
+const keyColor=k=>EMOCOL[k]||EMOCOL.Otra;
+const emoList=r=>r.emociones.map(x=>`${eName(x)} ${x.i}/10`).join(", ");
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dec=n=>n.toFixed(1).replace(".",",");
 const icon={
@@ -279,8 +297,8 @@ const icon={
 
 /* ---------- datos ---------- */
 function blankCond(){return{texto:"",tipo:"hecha",corto:"",largo:""}}
-function blank(){return{id:uid(),fecha:nowLocal(),duracion:"",emocion:"",emocionOtra:"",intensidad:0,antecedentes:"",antTipo:[],pensamientos:[""],sensaciones:[""],conductas:[blankCond()],efectoEmocion:"",efectoMalestar:"",ayuda:"",cortoGeneral:"",largoGeneral:"",relacionadoCon:"",creado:"",actualizado:""}}
-function normalize(r){const o=Object.assign(blank(),r||{});["pensamientos","sensaciones","antTipo"].forEach(k=>{if(!Array.isArray(o[k]))o[k]=[];o[k]=o[k].map(x=>String(x??""))});if(!Array.isArray(o.conductas))o.conductas=[];o.conductas=o.conductas.map(c=>Object.assign(blankCond(),typeof c==="string"?{texto:c}:c));["duracion","emocion","emocionOtra","antecedentes","efectoEmocion","efectoMalestar","ayuda","cortoGeneral","largoGeneral","relacionadoCon","fecha"].forEach(k=>o[k]=String(o[k]??""));o.intensidad=Math.max(0,Math.min(10,+o.intensidad||0));return o}
+function blank(){return{id:uid(),fecha:nowLocal(),duracion:"",emociones:[],antecedentes:"",antTipo:[],pensamientos:[""],sensaciones:[""],conductas:[blankCond()],efectoEmocion:"",efectoMalestar:"",ayuda:"",cortoGeneral:"",largoGeneral:"",relacionadoCon:"",creado:"",actualizado:""}}
+function normalize(r){const o=Object.assign(blank(),r||{});["pensamientos","sensaciones","antTipo"].forEach(k=>{if(!Array.isArray(o[k]))o[k]=[];o[k]=o[k].map(x=>String(x??""))});if(!Array.isArray(o.conductas))o.conductas=[];o.conductas=o.conductas.map(c=>Object.assign(blankCond(),typeof c==="string"?{texto:c}:c));if(!Array.isArray(r&&r.emociones))o.emociones=o.emocion?[{e:o.emocion,otra:o.emocionOtra||"",i:o.intensidad}]:[];o.emociones=o.emociones.filter(x=>x&&x.e).map(x=>({e:String(x.e),otra:String(x.otra??""),i:Math.max(0,Math.min(10,Math.round(+x.i)||0))}));delete o.emocion;delete o.emocionOtra;delete o.intensidad;["duracion","antecedentes","efectoEmocion","efectoMalestar","ayuda","cortoGeneral","largoGeneral","relacionadoCon","fecha"].forEach(k=>o[k]=String(o[k]??""));return o}
 const filled=a=>a.filter(x=>String(typeof x==="string"?x:x.texto).trim());
 function incomplete(r){return !r.antecedentes.trim()||(!filled(r.pensamientos).length&&!filled(r.sensaciones).length&&!filled(r.conductas).length)||!(r.efectoEmocion||r.cortoGeneral.trim()||r.conductas.some(c=>c.corto.trim()))}
 function load(){try{const a=JSON.parse(ls.get(K.rec,"[]"));return Array.isArray(a)?a.map(normalize):[]}catch(e){return[]}}
@@ -331,7 +349,7 @@ function renderList(){
     app.innerHTML=banners()+`<section class="empty">
       <span class="eyebrow">Antecedentes · Respuesta · Consecuencias</span>
       <h2>Registra la emoción mientras la estás sintiendo</h2>
-      <p>Ponle nombre, marca su intensidad del 1 al 10 y guarda. Si estás apurado, con eso basta: después completas los pensamientos, sensaciones, conductas y consecuencias.</p>
+      <p>Marca las emociones que sientes (casi nunca viene una sola), ponle intensidad a cada una del 1 al 10 y guarda. Si estás apurado, con eso basta: después completas los pensamientos, sensaciones, conductas y consecuencias.</p>
       <p>Todo queda guardado solo en este teléfono. Cuando quieras, en Ajustes generas un PDF con tus registros para enviárselo a tu psicólogo.</p>
       <button class="linkbtn" data-act="example">Ver un registro de ejemplo</button>
       <p style="font-size:.8rem">Basado en el Registro ARCO 2.0 de ${esc(AUTOR)}.</p>
@@ -341,12 +359,13 @@ function renderList(){
   const now=Date.now(),d7=now-7*864e5,d30=now-30*864e5;
   const last7=sorted.filter(r=>parseLocal(r.fecha).getTime()>=d7);
   const last30=sorted.filter(r=>parseLocal(r.fecha).getTime()>=d30);
-  const avg=last7.length?dec(last7.reduce((s,r)=>s+r.intensidad,0)/last7.length):"–";
-  const counts={};last30.forEach(r=>{const k=emoKey(r);counts[k]=(counts[k]||0)+1});
+  const e7=last7.flatMap(r=>r.emociones);
+  const avg=e7.length?dec(e7.reduce((s,x)=>s+x.i,0)/e7.length):"–";
+  const counts={};last30.forEach(r=>emoKeys(r).forEach(k=>{counts[k]=(counts[k]||0)+1}));
   const order=EMOS.map(e=>e[0]).filter(k=>counts[k]);
   const pend=sorted.filter(incomplete).length;
-  const present=[...new Set(sorted.map(emoKey))];
-  const shown=filter?sorted.filter(r=>emoKey(r)===filter):sorted;
+  const present=EMOS.map(e=>e[0]).filter(k=>sorted.some(r=>emoKeys(r).includes(k)));
+  const shown=filter?sorted.filter(r=>emoKeys(r).includes(filter)):sorted;
   const groups=[];shown.forEach(r=>{const k=(r.fecha||"").slice(0,10);let g=groups.find(x=>x.k===k);if(!g)groups.push(g={k,day:fmtDay(r.fecha),items:[]});g.items.push(r)});
   app.innerHTML=banners()+`
   <section class="panel">
@@ -369,15 +388,14 @@ function renderList(){
 function card(r){
   const prev=r.antecedentes.trim()||filled(r.pensamientos)[0]||"";
   return `<button class="card" data-act="open" data-id="${r.id}">
-    <i class="dot" style="background:${emoColor(r)}"></i>
-    <span class="t">${esc(emoName(r))}</span>
+    <span class="t ems">${r.emociones.map(x=>`<span class="ei"><i class="dot" style="background:${eColor(x)}"></i>${esc(eName(x))}<b>${x.i}</b></span>`).join("")||"Sin emoción"}</span>
     <span class="h">${fmtTime(r.fecha)}</span>
-    <span class="meta">${meter(r.intensidad)}<span class="muted" style="font-size:.85rem">${r.intensidad}/10</span>${incomplete(r)?'<span class="pill warn">Por completar</span>':""}${r.relacionadoCon?'<span class="pill">En cadena</span>':""}</span>
+    <span class="meta">${meter(peak(r))}${incomplete(r)?'<span class="pill warn">Por completar</span>':""}${r.relacionadoCon?'<span class="pill">En cadena</span>':""}</span>
     ${prev?`<span class="p">${esc(prev)}</span>`:""}
   </button>`;
 }
 
-function exampleRecord(){return normalize({id:"ejemplo",fecha:nowLocal(),duracion:"Unos 40 minutos",emocion:"Ansiedad",intensidad:7,
+function exampleRecord(){return normalize({id:"ejemplo",fecha:nowLocal(),duracion:"Unos 40 minutos",emociones:[{e:"Ansiedad",i:7},{e:"Culpa",i:5},{e:"Frustración",i:4}],
   antecedentes:"Me llega un correo a las 22:00 pidiendo un informe para mañana temprano. Antes ya venía cansado por haber dormido poco.",antTipo:["Externo","Inmediato","Distante"],
   pensamientos:["No voy a alcanzar.","Van a pensar que no soy capaz.","Me imagino la reunión de mañana con todos mirándome."],
   sensaciones:["Apretón en el pecho","Mandíbula tensa","Calor en la cara"],
@@ -396,9 +414,8 @@ function renderDetail(){
   <button class="back" data-act="back">${icon.back}Registros</button>
   ${example?'<div class="notice">Este es un ejemplo. No se guarda en tus registros.</div>':""}
   <div class="dhead">
-    <div class="emoname"><i class="dot" style="background:${emoColor(r)}"></i>${esc(emoName(r))}</div>
     <div class="when">${esc(fmtFull(r.fecha))}${r.duracion?" · "+esc(r.duracion):""}</div>
-    <div style="display:flex;align-items:center;gap:10px">${meter(r.intensidad)}<span class="big">${r.intensidad}/10</span></div>
+    <div class="elist${r.emociones.length>1?" many":""}">${r.emociones.map(x=>`<div class="erow"><span class="emoname"><i class="dot" style="background:${eColor(x)}"></i>${esc(eName(x))}</span><span class="eint">${meter(x.i)}<span class="big">${x.i}/10</span></span></div>`).join("")}</div>
     ${rel?`<div class="muted" style="font-size:.9rem">En cadena con <button class="linkbtn" data-act="open" data-id="${rel.id}">${esc(emoName(rel))} · ${esc(fmtTime(rel.fecha))}</button></div>`:""}
     ${chained.length?`<div class="muted" style="font-size:.9rem">Emociones que siguieron: ${chained.map(c=>`<button class="linkbtn" data-act="open" data-id="${c.id}">${esc(emoName(c))}</button>`).join(", ")}</div>`:""}
   </div>
@@ -460,17 +477,20 @@ function renderForm(){
   ${formErr?`<div class="err" id="err">${esc(formErr)}</div>`:""}
   ${rel?`<div class="notice">Emoción en cadena con ${esc(emoName(rel))} de las ${esc(fmtTime(rel.fecha))}</div>`:""}
   <section class="sec">
-    <div class="field"><span class="lbl">¿Qué emoción estás sintiendo?</span>
-      ${(()=>{const chip=([n,c])=>`<button type="button" class="chip" data-act="emo" data-v="${esc(n)}" aria-pressed="${f.emocion===n}"><i class="dot" style="background:${c}"></i>${esc(n)}</button>`;
+    <div class="field"><span class="lbl">¿Qué emociones estás sintiendo?</span>
+      <p class="hint">Marca todas las que reconozcas. Casi nunca viene una sola.</p>
+      ${(()=>{const chip=([n,c])=>`<button type="button" class="chip" data-act="emo" data-v="${esc(n)}" aria-pressed="${f.emociones.some(x=>x.e===n)}"><i class="dot" style="background:${c}"></i>${esc(n)}</button>`;
         const main=EMO_MAIN.map(n=>[n,EMOCOL[n]]), rest=EMOS.filter(([n])=>!EMO_MAIN.includes(n)&&n!=="Otra");
-        const open=showAllEmo||(f.emocion&&!EMO_MAIN.includes(f.emocion));
+        const open=showAllEmo||f.emociones.some(x=>!EMO_MAIN.includes(x.e));
         return `<div class="emo">${main.map(chip).join("")}${open?"":`<button type="button" class="chip more" data-act="moreemo">Ver más emociones (${rest.length})</button>`}</div>
         ${open?`<div class="emo">${rest.map(chip).join("")}${chip(["Otra",EMOCOL.Otra])}</div>`:""}`})()}
-      ${f.emocion==="Otra"?`<input type="text" id="emocionOtra" data-f="emocionOtra" value="${esc(f.emocionOtra)}" placeholder="Ponle nombre a la emoción">`:""}
     </div>
-    <div class="field"><span class="lbl">Intensidad</span>
-      <div class="intens" role="group" aria-label="Intensidad del 1 al 10">${Array.from({length:10},(_,i)=>`<button type="button" data-act="int" data-v="${i+1}" aria-pressed="${f.intensidad===i+1}">${i+1}</button>`).join("")}</div>
-      <div class="scale"><span>Leve</span><span>Máxima</span></div>
+    <div class="field"><span class="lbl">${f.emociones.length>1?"Intensidad de cada una":"Intensidad"}</span>
+      ${f.emociones.length?f.emociones.map((x,k)=>`<div class="einten">
+        <div class="ehead"><i class="dot" style="background:${eColor(x)}"></i><b>${esc(x.e==="Otra"?"Otra emoción":x.e)}</b>${x.i?`<span class="muted">${x.i}/10</span>`:""}</div>
+        ${x.e==="Otra"?`<input type="text" id="eotra-${k}" data-f="emociones.${k}.otra" value="${esc(x.otra)}" placeholder="Ponle nombre a la emoción">`:""}
+        <div class="intens" role="group" aria-label="Intensidad de ${esc(eName(x))}, del 1 al 10">${Array.from({length:10},(_,i)=>`<button type="button" data-act="int" data-k="${k}" data-v="${i+1}" aria-pressed="${x.i===i+1}">${i+1}</button>`).join("")}</div>
+      </div>`).join("")+`<div class="scale"><span>Leve</span><span>Máxima</span></div>`:`<p class="hint" style="margin:0">Marca una o más emociones y aquí le pones intensidad a cada una.</p>`}
     </div>
     <div class="row2">
       <div class="field"><label for="fecha">Fecha y hora</label><input type="datetime-local" id="fecha" data-f="fecha" value="${esc(f.fecha)}"></div>
@@ -543,21 +563,23 @@ function renderStats(){
   [1,5,10].forEach(v=>{svg+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-6}" y="${Y(v)+3.5}" text-anchor="end">${v}</text>`});
   const ticks=range===7?7:4;
   for(let i=0;i<=ticks;i++){const t=t0+(t1-t0)*i/ticks;const d=new Date(t);svg+=`<text x="${X(t)}" y="${H-8}" text-anchor="${i===0?"start":i===ticks?"end":"middle"}">${d.toLocaleDateString("es-CL",{day:"numeric",month:"short"})}</text>`}
-  const byDay={};rs.forEach(r=>{const k=r.fecha.slice(0,10);(byDay[k]=byDay[k]||[]).push(r.intensidad)});
+  const byDay={};rs.forEach(r=>{const k=r.fecha.slice(0,10);r.emociones.forEach(x=>(byDay[k]=byDay[k]||[]).push(x.i))});
   const days=Object.keys(byDay).sort();
   if(days.length>1){svg+=`<polyline class="avg" points="${days.map(k=>{const d=parseLocal(k+"T12:00").getTime();const a=byDay[k].reduce((s,v)=>s+v,0)/byDay[k].length;return `${X(Math.min(d,t1)).toFixed(1)},${Y(a).toFixed(1)}`}).join(" ")}"/>`}
-  rs.forEach(r=>{svg+=`<circle cx="${X(parseLocal(r.fecha).getTime()).toFixed(1)}" cy="${Y(r.intensidad).toFixed(1)}" r="4.5" fill="${emoColor(r)}" stroke="var(--surface)" stroke-width="1.5"/>`});
+  rs.forEach(r=>r.emociones.filter(x=>x.i).forEach(x=>{svg+=`<circle cx="${X(parseLocal(r.fecha).getTime()).toFixed(1)}" cy="${Y(x.i).toFixed(1)}" r="4.5" fill="${eColor(x)}" stroke="var(--surface)" stroke-width="1.5"><title>${esc(eName(x))} ${x.i}/10</title></circle>`}));
   svg+="</svg>";
   // por emoción
-  const agg={};rs.forEach(r=>{const k=emoKey(r);(agg[k]=agg[k]||{n:0,s:0});agg[k].n++;agg[k].s+=r.intensidad});
+  const agg={};rs.forEach(r=>r.emociones.forEach(x=>{const k=aggKey(x);(agg[k]=agg[k]||{n:0,s:0});agg[k].n++;agg[k].s+=x.i}));
   const keys=Object.keys(agg).sort((a,b)=>agg[b].n-agg[a].n);const maxN=Math.max(...keys.map(k=>agg[k].n));
   // efecto de conductas
   const eff={"Subió":0,"Se mantuvo":0,"Bajó":0};rs.forEach(r=>{if(eff[r.efectoEmocion]!=null)eff[r.efectoEmocion]++});const effN=eff["Subió"]+eff["Se mantuvo"]+eff["Bajó"];
   const conds=rs.flatMap(r=>filled(r.conductas));const imp=conds.filter(c=>c.tipo==="impulso").length;
   const ayu={"Me ayuda":0,"A medias":0,"Me perjudica":0};rs.forEach(r=>{if(ayu[r.ayuda]!=null)ayu[r.ayuda]++});const ayuN=ayu["Me ayuda"]+ayu["A medias"]+ayu["Me perjudica"];
   const ant={};rs.forEach(r=>r.antTipo.forEach(t=>ant[t]=(ant[t]||0)+1));
-  const avg=rs.reduce((s,r)=>s+r.intensidad,0)/rs.length;
-  const hi=rs.filter(r=>r.intensidad>=8).length;
+  const allE=rs.flatMap(r=>r.emociones);
+  const avg=allE.length?allE.reduce((s,x)=>s+x.i,0)/allE.length:0;
+  const hi=rs.filter(r=>peak(r)>=8).length;
+  const perRec=allE.length/rs.length;
   const split=(obj,n,cols)=>`<div class="split">${Object.keys(obj).filter(k=>obj[k]).map((k,i)=>`<span style="flex:${obj[k]};background:${cols[k]};color:#fff" title="${esc(k)}">${Math.round(obj[k]/n*100)}%</span>`).join("")}</div><div class="legend">${Object.keys(obj).map(k=>`<span><i class="dot" style="background:${cols[k]}"></i>${esc(k)} ${obj[k]}</span>`).join("")}</div>`;
   const effCol={"Subió":"#C2453A","Se mantuvo":"#7D8894","Bajó":"#2E8A62"}, ayuCol={"Me ayuda":"#2E8A62","A medias":"#B88A2A","Me perjudica":"#C2453A"};
   app.innerHTML=rangeBtns+`
@@ -565,17 +587,18 @@ function renderStats(){
     <div class="nums">
       <div class="num"><b>${rs.length}</b><span>registros</span></div>
       <div class="num"><b>${dec(avg)}</b><span>intensidad promedio</span></div>
-      <div class="num"><b>${hi}</b><span>de intensidad 8 o más</span></div>
+      <div class="num"><b>${dec(perRec)}</b><span>emociones por registro</span></div>
+      <div class="num"><b>${hi}</b><span>con alguna emoción de 8 o más</span></div>
     </div>
   </section>
   <section class="panel">
     <h2>Intensidad en el tiempo</h2>
-    <p class="muted" style="font-size:.85rem">Cada punto es un registro, con el color de su emoción. La línea es el promedio de cada día.</p>
+    <p class="muted" style="font-size:.85rem">Cada punto es una emoción registrada, con su color. La línea es el promedio de cada día.</p>
     ${svg}
   </section>
   <section class="panel">
     <h2>Emociones más frecuentes</h2>
-    <div class="hbars">${keys.map(k=>`<div class="hbar"><span class="nm"><i class="dot" style="background:${EMOCOL[k]}"></i>${esc(k)}</span><span class="tr"><span style="width:${agg[k].n/maxN*100}%;background:${EMOCOL[k]}"></span></span><span class="vl">${agg[k].n} · prom. ${dec(agg[k].s/agg[k].n)}</span></div>`).join("")}</div>
+    <div class="hbars">${keys.map(k=>`<div class="hbar"><span class="nm"><i class="dot" style="background:${keyColor(k)}"></i>${esc(k)}</span><span class="tr"><span style="width:${agg[k].n/maxN*100}%;background:${keyColor(k)}"></span></span><span class="vl">${agg[k].n} · prom. ${dec(agg[k].s/agg[k].n)}</span></div>`).join("")}</div>
   </section>
   <section class="panel">
     <h2>Después de actuar, la emoción…</h2>
@@ -637,7 +660,7 @@ function toMarkdown(){
   const s=[...records].sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||""));
   const L=["# Registro ARCO",""];
   s.forEach(r=>{
-    L.push(`## ${fmtFull(r.fecha)} · ${emoName(r)} · intensidad ${r.intensidad}/10`);
+    L.push(`## ${fmtFull(r.fecha)} · ${emoList(r)}`);
     if(r.duracion)L.push(`Duración: ${r.duracion}`);
     const rel=r.relacionadoCon&&records.find(x=>x.id===r.relacionadoCon);if(rel)L.push(`En cadena con: ${emoName(rel)} (${fmtFull(rel.fecha)})`);
     L.push("","**A · Antecedentes**",r.antecedentes.trim()||"—");if(r.antTipo.length)L.push(`(${r.antTipo.join(", ")})`);
@@ -711,27 +734,32 @@ async function buildPDF(){
   doc.text(pdfTxt(rs.length?`Período: ${fd(d0)} al ${fd(d1)} · ${rs.length} registro${rs.length===1?"":"s"}`:"Sin registros"),M,y+3.5);y+=5.5;
   doc.text(pdfTxt(`Generado el ${fechaDoc}`),M,y+3.5);y+=8;
   // resumen por emoción
-  const agg={};rs.forEach(r=>{const k=emoKey(r);(agg[k]=agg[k]||{n:0,s:0});agg[k].n++;agg[k].s+=r.intensidad});
+  const agg={};rs.forEach(r=>r.emociones.forEach(x=>{const k=aggKey(x);(agg[k]=agg[k]||{n:0,s:0});agg[k].n++;agg[k].s+=x.i}));
   const keys=Object.keys(agg).sort((a,b)=>agg[b].n-agg[a].n);
   if(keys.length){
     doc.setDrawColor(...LINE);doc.setFillColor(247,249,251);
     const rows=Math.ceil(keys.length/2),bh=10+rows*6;
     doc.roundedRect(M,y,CW,bh,2,2,"FD");
     font(7.5,"bold");color(MUTED);doc.text("RESUMEN POR EMOCIÓN",M+5,y+6);
-    keys.forEach((k,i)=>{const cx=M+5+(i%2)*(CW/2),cy=y+12+Math.floor(i/2)*6;doc.setFillColor(...hex(EMOCOL[k]));doc.circle(cx+1.2,cy-1.1,1.3,"F");font(9.5);color(INK);doc.text(pdfTxt(`${k}: ${agg[k].n} registro${agg[k].n===1?"":"s"} · intensidad promedio ${dec(agg[k].s/agg[k].n)}`),cx+4,cy)});
+    keys.forEach((k,i)=>{const cx=M+5+(i%2)*(CW/2),cy=y+12+Math.floor(i/2)*6;doc.setFillColor(...hex(keyColor(k)));doc.circle(cx+1.2,cy-1.1,1.3,"F");font(9.5);color(INK);doc.text(pdfTxt(`${k}: ${agg[k].n} ${agg[k].n===1?"vez":"veces"} · intensidad promedio ${dec(agg[k].s/agg[k].n)}`),cx+4,cy)});
     y+=bh+8;
   }
   rs.forEach((r,idx)=>{
     ensure(40);
     if(idx>0&&y>M){doc.setDrawColor(...LINE);doc.line(M,y,PW-M,y);y+=6}
     // encabezado del registro
-    doc.setFillColor(...hex(emoColor(r)));doc.circle(M+2,y+3.2,2,"F");
-    font(13,"bold");color(INK);doc.text(pdfTxt(emoName(r)),M+6,y+4.5);
-    const nameW=doc.getTextWidth(pdfTxt(emoName(r)));
-    font(10,"normal");color(MUTED);doc.text(`Intensidad ${r.intensidad}/10`,M+6+nameW+4,y+4.5);
-    doc.text(pdfTxt(fmtFull(r.fecha)),PW-M,y+4.5,{align:"right"});y+=7;
-    // barra de intensidad
-    for(let i=0;i<10;i++){doc.setFillColor(...(i<r.intensidad?INK:LINE));doc.roundedRect(M+6+i*5.2,y,4.4,1.8,0.6,0.6,"F")}y+=4;
+    font(10,"normal");color(MUTED);doc.text(pdfTxt(fmtFull(r.fecha)),PW-M,y+4.5,{align:"right"});
+    // una fila por emoción: punto, nombre, barra de intensidad y número
+    const ems=r.emociones.length?r.emociones:[{e:"Otra",otra:"Sin emoción",i:0}];
+    font(12.5,"bold");const nw=Math.min(70,Math.max(...ems.map(x=>doc.getTextWidth(pdfTxt(eName(x))))));
+    ems.forEach((x,k)=>{
+      doc.setFillColor(...hex(eColor(x)));doc.circle(M+2,y+3.2,1.9,"F");
+      font(12.5,"bold");color(INK);doc.text(pdfTxt(eName(x)),M+6,y+4.5,{maxWidth:70});
+      const bx=M+6+nw+5;for(let i=0;i<10;i++){doc.setFillColor(...(i<x.i?INK:LINE));doc.roundedRect(bx+i*4.4,y+2.4,3.7,1.8,0.6,0.6,"F")}
+      font(10,"normal");color(MUTED);doc.text(`${x.i}/10`,bx+45,y+4.5);
+      y+=6.6;
+    });
+    y+=1;
     const extra=[];if(r.duracion)extra.push("Duración: "+r.duracion);
     const rel=r.relacionadoCon&&records.find(x=>x.id===r.relacionadoCon);if(rel)extra.push(`En cadena con: ${emoName(rel)} (${fmtFull(rel.fecha)})`);
     if(extra.length)para(extra.join("   ·   "),{x:M+6,w:CW-6,size:9,c:MUTED});
@@ -842,8 +870,8 @@ document.addEventListener("click",async e=>{
   if(a==="cancel"){const isNew=!records.some(x=>x.id===f.id);go(isNew?"list":"detail");return}
   if(a==="discard"){ls.del(K.draft);f=blank();draftRestored=false;rerenderKeep();return}
   if(a==="moreemo"){showAllEmo=true;rerenderKeep();return}
-  if(a==="emo"){f.emocion=f.emocion===b.dataset.v?"":b.dataset.v;saveDraft();rerenderKeep(f.emocion==="Otra"?"emocionOtra":null);return}
-  if(a==="int"){f.intensidad=+b.dataset.v;saveDraft();rerenderKeep();return}
+  if(a==="emo"){const v=b.dataset.v,k=f.emociones.findIndex(x=>x.e===v);if(k>=0)f.emociones.splice(k,1);else f.emociones.push({e:v,otra:"",i:0});saveDraft();rerenderKeep(k<0&&v==="Otra"?`eotra-${f.emociones.length-1}`:null);return}
+  if(a==="int"){const x=f.emociones[+b.dataset.k];if(x){x.i=+b.dataset.v;saveDraft();rerenderKeep()}return}
   if(a==="ant"){const v=b.dataset.v;f.antTipo=f.antTipo.includes(v)?f.antTipo.filter(x=>x!==v):[...f.antTipo,v];saveDraft();rerenderKeep();return}
   if(a==="seg"){setPath(b.dataset.f,getPath(b.dataset.f)===b.dataset.v&&!/\.tipo$/.test(b.dataset.f)?"":b.dataset.v);saveDraft();rerenderKeep();return}
   if(a==="add"){const k=b.dataset.k;f[k].push(k==="conductas"?blankCond():"");saveDraft();rerenderKeep(`${k}-${f[k].length-1}`);return}
@@ -851,9 +879,9 @@ document.addEventListener("click",async e=>{
   if(a==="mv"){const k=b.dataset.k,i=+b.dataset.i,j=i+ +b.dataset.d;[f[k][i],f[k][j]]=[f[k][j],f[k][i]];saveDraft();rerenderKeep();return}
   if(a==="save"){
     const fail=(msg,focus)=>{formErr=msg;rerenderKeep(focus);const er=$("#err");if(er&&!focus)er.scrollIntoView({block:"center"})};
-    if(!f.emocion)return fail("Elige la emoción que estás sintiendo antes de guardar.");
-    if(f.emocion==="Otra"&&!f.emocionOtra.trim())return fail("Escribe el nombre de la emoción.","emocionOtra");
-    if(!f.intensidad)return fail("Marca la intensidad del 1 al 10 antes de guardar.");
+    if(!f.emociones.length)return fail("Marca al menos una emoción antes de guardar.");
+    const ko=f.emociones.findIndex(x=>x.e==="Otra"&&!x.otra.trim());if(ko>=0)return fail("Escribe el nombre de la otra emoción.",`eotra-${ko}`);
+    const sinI=f.emociones.find(x=>!x.i);if(sinI)return fail(`Marca la intensidad de ${eName(sinI)} del 1 al 10 antes de guardar.`);
     const r=clone(f);r.pensamientos=r.pensamientos.filter(x=>x.trim());r.sensaciones=r.sensaciones.filter(x=>x.trim());r.conductas=r.conductas.filter(c=>c.texto.trim()||c.corto.trim()||c.largo.trim());
     try{persist(r);ls.del(K.draft);currentId=r.id;draftRestored=false;go("detail");toast(incomplete(r)?"Guardado. Puedes completarlo después.":"Registro guardado")}
     catch(err){fail("No se pudo guardar porque el teléfono no tiene espacio para la app. Libera espacio o descarga un respaldo, e inténtalo de nuevo. Lo que escribiste sigue aquí.")}
